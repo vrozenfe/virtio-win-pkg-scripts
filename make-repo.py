@@ -16,6 +16,7 @@ from util.utils import fail, shellcomm, yes_or_no
 # Note, if you update this, --repo-only doesn't currently handle
 # the .htacess updating. Do it by hand or fix this script :)
 STABLE_RPMS = [
+    "0.1.302-1",  # RHEL10.3.0
     "0.1.285-1",  # RHEL10.1.0
     "0.1.271-1",  # RHEL10.0.0
     "0.1.266-1",  # RHEL9.5.0.z
@@ -206,6 +207,19 @@ class LocalRepo():
         # will make for crappy bug reports
         open(os.path.join(virtiodir, ".htaccess"), "w").write(htaccess)
 
+    def add_checksum_file(self, rpmpath, srpmpath):
+        """
+        Generate a CHECKSUM file alongside the ISO, listing md5sums for
+        the RPM/SRPM under both their versioned and generic 'latest' names
+        """
+        virtiodir = os.path.join(
+                self.LOCAL_DIRECT_DIR, self.virtio_basedir)
+        rpmname = os.path.basename(rpmpath)
+        srpmname = os.path.basename(srpmpath)
+        shellcomm("cd %s && md5sum %s %s virtio-win.noarch.rpm "
+            "virtio-win.src.rpm > CHECKSUM" %
+            (virtiodir, rpmname, srpmname))
+
     def add_htaccess_stable_links(self):
         # Make latest-qemu-ga, latest-virtio, and stable-virtio links
         def add_link(src, link):
@@ -287,6 +301,9 @@ def _populate_local_tree(buildversions, rpm_output, rpm_buildroot):
     # Move virtio .iso and RPMs to stable locations
     virtiowinpath = os.path.realpath(os.path.join(sharedir, "virtio-win.iso"))
     localrepo.add_virtiowin_media(virtiowinpath, dst_rpmpath, dst_srpmpath)
+
+    # Generate a CHECKSUM file for the RPM/SRPM
+    localrepo.add_checksum_file(dst_rpmpath, dst_srpmpath)
 
     # Add virtio-win-gt .msis into the virtio iso dir
     virtiogtpaths = _glob(os.path.join(sharedir, "installer", "*"))
