@@ -5,6 +5,7 @@ import glob
 import os
 import re
 import shutil
+import subprocess
 import sys
 
 from util.buildversions import BuildVersions
@@ -367,6 +368,26 @@ def _run_createrepo():
             os.path.join(LocalRepo.LOCAL_REPO_DIR, rpmdir))
 
 
+def _shellcomm_allow_partial_rsync(cmd):
+    """
+    Like shellcomm, but tolerates rsync exit code 23 (partial transfer
+    due to per-file errors). This happens when pushing to fedorapeople.org
+    because --chown tries to chgrp every file it walks, including old
+    files uploaded by other accounts (e.g. an automated signing
+    pipeline) that we don't have permission to chgrp. That's expected
+    and shouldn't abort the whole push.
+    """
+    print("+ %s" % cmd)
+    try:
+        return subprocess.check_call(cmd, shell=True)
+    except subprocess.CalledProcessError as e:
+        if e.returncode != 23:
+            raise
+        print("WARNING: rsync exited 23 (partial transfer, likely "
+              "chgrp permission errors on files owned by other "
+              "accounts). Continuing.")
+
+
 def _run_rsync(reverse, dry):
     def _cmd(opts, src, dst):
         rsync = "rsync "
@@ -395,9 +416,16 @@ def _run_rsync(reverse, dry):
         src = local
         dst = remote
 
+    # Only the real push (not dry-run, not the reverse/pull direction)
+    # uses --chown, which is what can trigger the tolerable chgrp
+    # permission errors on files owned by other accounts.
+    runner = shellcomm
+    if not reverse and not dry:
+        runner = _shellcomm_allow_partial_rsync
+
     # Put the RPMs in place. Skip yum repodata until RPMs
     # are inplace, to prevent users seeing an inconsistent repo
-    shellcomm(_cmd("--exclude repodata", src, dst))
+    runner(_cmd("--exclude repodata", src, dst))
 
     # Overwrite the repodata and remove stale files
     args = ""
@@ -405,7 +433,7 @@ def _run_rsync(reverse, dry):
     # avoid possibly deleting anything else
     args += '--include "*/" --include "repodata/*" --exclude "*" '
     args += "--delete"
-    shellcomm(_cmd(args, src, dst))
+    runner(_cmd(args, src, dst))
 
 
 def _push_repos(reverse):

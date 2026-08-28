@@ -32,12 +32,23 @@ def _update_copymap_for_driver(input_dir, ostuple, drivername, copymap):
     destdirs = filemap.DRIVER_OS_MAP[drivername][ostuple]
     missing_patterns = []
 
+    # Source arch, e.g. Win10/ARM64 -> "arm64". Most drivers ship
+    # identical files regardless of arch, so the plain drivername:dest_os
+    # key covers them. A few (e.g. viosock) ship different files per
+    # arch under the same dest_os, and use a drivername:dest_os_arch key.
+    arch = ostuple.split("/")[-1].lower()
+
     for destdir in destdirs:
         dest_os = destdir.split("/")[0]
 
-        filelist = filemap.FILELISTS.get(drivername + ":" + dest_os, None)
+        filelist = None
+        if arch in ("arm64", "x86"):
+            filelist = filemap.FILELISTS.get(
+                "%s:%s_%s" % (drivername, dest_os, arch))
         if filelist is None:
-            filelist = filemap.FILELISTS.get(drivername)
+            filelist = filemap.FILELISTS.get(drivername + ":" + dest_os)
+        if filelist is None:
+            filelist = filemap.FILELISTS.get(drivername, [])
 
         for pattern in filelist:
             files = glob.glob(os.path.abspath(
@@ -172,10 +183,6 @@ def check_remaining_files(input_dir, seenfiles):
 #        "/Win10/amd64/qemupciserial.inf",
 #        "/Win10/x86/qemupciserial.cat",
 #        "/Win10/x86/qemupciserial.inf",
-         "/Win10/x86/viomem.cat",
-         "/Win10/x86/viomem.sys",
-         "/Win10/x86/viomem.inf",
-         "/Win10/x86/viomem.pdb",
     ]
 
     remaining = []
