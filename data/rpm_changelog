@@ -1,4 +1,8 @@
 %changelog
+* Thu Aug 27 2026 vrozenfe@redhat.com - 0.1.302-1
+- Update to virtio-win-prewhql-0.1-302
+- Update to qemu-ga-win-110.2.3-2.el10
+
 * Fri Sep 12 2025 vrozenfe@redhat.com - 0.1.285-1
 
 * Mon Apr 07 2025 vrozenfe@redhat.com - 0.1.271-1

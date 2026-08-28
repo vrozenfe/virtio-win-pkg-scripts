@@ -45,7 +45,7 @@ SUPPORTED_PLATFORM_DIGITAL_SIG = {
     'w10/x86' : 'v.1.0.0._.V.b',
     '2k16/amd64': 'S.e.r.v.e.r._.v.1.0.0._.X.6.4._.R.S',
     '2k19/amd64': 'S.e.r.v.e.r._.v.1.0.0._.X.6.4._.R.S.5',
-    'w11/amd64' : 'v.1.0.0._.X.6.4._.2.4.H.2',
+    'w11/amd64' : 'v.1.0.0._.X.6.4._.2.5.H.2',
     '2k22/amd64': 'S.e.r.v.e.r._.v.1.0.0._.X.6.4._.2.1.H.2',
     '2k25/amd64': 'S.e.r.v.e.r._.v.1.0.0._.X.6.4._.2.4.H.2',
 }
@@ -124,10 +124,12 @@ FILELISTS['pvpanic:w8'] = _pvpanicfiles + ['WdfCoInstaller01011.dll', 'pvpanic-p
 FILELISTS['pvpanic:w8.1'] = _pvpanicfiles + ['pvpanic-pci.cat', 'pvpanic-pci.inf']
 FILELISTS['pvpanic:2k12'] = FILELISTS['pvpanic:w8']
 FILELISTS['pvpanic:2k12R2'] = FILELISTS["pvpanic:w8.1"]
-FILELISTS['pvpanic:w10'] = _pvpanicfiles + ['pvpanic-pci.cat', 'pvpanic-pci.inf']
+# Starting with virtio-win build 302, pvpanic-pci.cat/.inf are no longer
+# shipped separately for Win10/Win11 (only Win8/Win8.1 still split them out)
+FILELISTS['pvpanic:w10'] = _pvpanicfiles
 FILELISTS['pvpanic:2k16'] = FILELISTS['pvpanic:w10']
 FILELISTS['pvpanic:2k19'] = FILELISTS['pvpanic:w10']
-FILELISTS['pvpanic:w11'] = _pvpanicfiles + ['pvpanic-pci.cat', 'pvpanic-pci.inf']
+FILELISTS['pvpanic:w11'] = _pvpanicfiles
 FILELISTS['pvpanic:2k22'] = FILELISTS['pvpanic:w10']
 FILELISTS['pvpanic:2k25'] = FILELISTS['pvpanic:w11']
 
@@ -254,6 +256,8 @@ _debugfiles = [
     'debug/CollectSystemInfo.ps1',
     'debug/LICENSE',
     'debug/README.md',
+    'debug/CollectSystemInfo-WinPE.ps1',
+    'debug/GetVirtioWinInfo.ps1',
 ]
 FILELISTS['debug'] = _debugfiles
 
@@ -304,6 +308,13 @@ _viogpudofiles = [
     'viogpuap.pdb',
 ]
 FILELISTS['viogpudo'] = _viogpudofiles
+# viogpures.exe (VioGpu Resolution Service) is only shipped for Win10/Win11
+FILELISTS['viogpudo:w10'] = _viogpudofiles + ['viogpures.exe', 'viogpures.pdb']
+FILELISTS['viogpudo:2k16'] = FILELISTS['viogpudo:w10']
+FILELISTS['viogpudo:2k19'] = FILELISTS['viogpudo:w10']
+FILELISTS['viogpudo:2k22'] = FILELISTS['viogpudo:w10']
+FILELISTS['viogpudo:w11'] = FILELISTS['viogpudo:w10']
+FILELISTS['viogpudo:2k25'] = FILELISTS['viogpudo:w10']
 
 _fwcfgfiles = [
     'fwcfg.cat',
@@ -335,10 +346,6 @@ _viosockfiles = [
     'viosock.inf',
     'viosock.pdb',
     'viosock.sys',
-    'viosocklib_x64.dll',
-    'viosocklib_x64.pdb',
-    'viosocklib_x86.dll',
-    'viosocklib_x86.pdb',
     'viosockwspsvc.exe',
     'viosockwspsvc.pdb',
     'viosock-test.exe',
@@ -347,15 +354,26 @@ _viosockfiles = [
     'viosocklib-test.pdb',
     'vstbridge.exe',
     'vstbridge.pdb',
-
 ]
 FILELISTS['viosock'] = _viosockfiles
-FILELISTS['viosock:w10'] = _viosockfiles + ['viosocklib.dll']
+FILELISTS['viosock:w10'] = _viosockfiles + [
+    'viosocklib_x64.dll',
+    'viosocklib_x64.pdb',
+    'viosocklib_x86.dll',
+    'viosocklib_x86.pdb',
+]
+FILELISTS['viosock:w10_x86'] = _viosockfiles + [
+    'viosocklib.dll',
+    'viosocklib.pdb',
+]
+FILELISTS['viosock:w10_arm64'] = FILELISTS['viosock:w10_x86']
 FILELISTS['viosock:2k16'] = FILELISTS['viosock:w10']
 FILELISTS['viosock:2k19'] = FILELISTS['viosock:w10']
-FILELISTS['viosock:w11'] = _viosockfiles
 FILELISTS['viosock:2k22'] = FILELISTS['viosock:w10']
-FILELISTS['viosock:2k25'] = FILELISTS['viosock:w11']
+FILELISTS['viosock:w11'] = FILELISTS['viosock:w10']
+FILELISTS['viosock:w11_arm64'] = FILELISTS['viosock:w10_arm64']
+FILELISTS['viosock:2k25'] = FILELISTS['viosock:w10']
+FILELISTS['viosock:2k25_arm64'] = FILELISTS['viosock:w10_arm64']
 
 # Describes what windows arch the virtio-win build output maps to.
 #
@@ -666,6 +684,7 @@ DRIVER_OS_MAP = {
     },
 
     'viomem': {
+        'Win10/x86': ['w10/x86'],
         'Win10/amd64': ['w10/amd64', '2k16/amd64', '2k19/amd64', '2k22/amd64'],
         'Win10/ARM64': ['w10/ARM64'],
 
@@ -674,9 +693,12 @@ DRIVER_OS_MAP = {
     },
 
     'viosock': {
+        'Win10/x86': ['w10/x86'],
         'Win10/amd64': ['w10/amd64', '2k16/amd64', '2k19/amd64', '2k22/amd64'],
+        'Win10/ARM64': ['w10/ARM64'],
 
         'Win11/amd64': ['w11/amd64', '2k25/amd64'],
+        'Win11/ARM64': ['w11/ARM64', '2k25/ARM64'],
     },
 
 }
